@@ -4,42 +4,105 @@ from random import randint
 #import game_logic
 
 games_with = {}
+games_set = {}
 
 @dp.message_handler(commands=['start'])
 async def mes_start(message: types.Message):
+	global games_with
 	await message.answer('Этот бот для игры в конфеты\n'
 						 'Доступны следующие команды:\n'
 						 '/start \n'
 						 '/help \n'
+						 '/set_candy "new_count"\n'
 						 '/new_game \n'
-						 '/set_candy')
+						 '/stop \n'
+						 '/restart')
+	print(f'Пользователь {message.from_user.first_name} присоеденился!')
+
 	
 @dp.message_handler(commands=['help'])
 async def mes_start(message: types.Message):
 	await message.answer('Этот бот для игры в конфеты.\n'
 						 'Игроки поочередно берут конфеты со стола.\n'
 						 'Можно взять от 1 до 28. Выигрывает ток кто взял последнюю конфету.\n'
-						 'Команда (/set_candy число) устанавливает \nначальное кол-во конфет и запускает игру.\n/new_game запускает новую игру с конфетами по умолчанию')
+						 '/start - присоедениться к боту\n'
+						 '/help  - вывод текущей подсказки\n'
+						 '/set_candy "new_count" - установить число конфет\n'
+						 '/new_game - начать новую игру \n'
+						 '/stop - остановить игру\n'
+						 '/restart - начать игру заново')
 	
+@dp.message_handler(commands=['stop'])
+async def mes_start(message: types.Message):
+	global games_with
+	# Если игра уже запущена, то на сообщаем об этом пользователю
+	if message.from_user.id in games_with:
+		del games_with[message.from_user.id]
+		await message.answer('Игра остановлена. \n'
+							'Для настройки кол-ва конфен используй /set_candy\n'
+							'Для начала игры /new_game')
+	else:
+		await message.answer('Игра не запущена. \n')
+		
+@dp.message_handler(commands=['restart'])
+async def mes_start(message: types.Message):
+	global games_with
+	# Если игра уже запущена, то на сообщаем об этом пользователю
+	if message.from_user.id in games_with:
+		await start_game(message)
+	else:
+		await message.answer('Игра не запущена. \n')
+	
+
+
 @dp.message_handler(commands=['new_game'])
 async def mes_start(message: types.Message):
 	global games_with
-	games_with[message.from_user.id] = 150
+	# Если игра уже запущена, то на сообщаем об этом пользователю
+	if message.from_user.id in games_with:
+		await message.answer(f'Игра уже запущена!\n'
+					   'Продолжай играть\n или воспользуйся следующими командами:\n'
+					   '/stop - остановить игру\n'
+					   '/restart - запустить игру с начала')
+		return
+	
+	await start_game(message)
+	#if message.from_user.id in games_set:
+		#games_with[message.from_user.id] = games_set[message.from_user.id] # Если пользователь есть в списке пользователей с настройками, то берем конфеты из настроек
+	#else:
+		#games_with[message.from_user.id] = 150 # Конфеты по умолчанию
+	#await message.answer(f'Привет {message.from_user.first_name}!\n'
+						#f'Давай начнем игру. На столе {games_with[message.from_user.id]} конфет\n'
+						#'Сколько конфет Ты хочешь взять?')
+
+async def start_game(message: types.Message):
+	global games_with
+	global games_set
+	if message.from_user.id in games_set:
+		games_with[message.from_user.id] = games_set[message.from_user.id] # Если пользователь есть в списке пользователей с настройками, то берем конфеты из настроек
+	else:
+		games_with[message.from_user.id] = 150 # Конфеты по умолчанию
 	await message.answer(f'Привет {message.from_user.first_name}!\n'
 						f'Давай начнем игру. На столе {games_with[message.from_user.id]} конфет\n'
 						'Сколько конфет Ты хочешь взять?')
+	
 
 @dp.message_handler(commands=['set_candy'])
 async def mes_start(message: types.Message):
 	global games_with
-	new_count = message.text.split()[1]
-	if new_count.isdigit() or new_count == '':
-		games_with[message.from_user.id] = int(new_count)
+	global games_set
+	if message.from_user.id in games_with:
+		await message.answer('Нельзя менять количество конфет во время игры!')
+		return
+
+	new_count = message.text.split()
+	if len(new_count) == 2 and new_count[1].isdigit():
+		games_set[message.from_user.id] = int(new_count[1])
 		await message.answer(f'Привет {message.from_user.first_name}!\n'
-						f'Давай начнем игру. На столе {games_with[message.from_user.id]} конфет\n'
-						'Сколько конфет Ты хочешь взять?')
+						f'На столе {games_set[message.from_user.id]} конфет.\n'
+						'Для начала игры используй /new_game')
 	else:
-		await message.answer('Введено не число')
+		await message.answer('Введите число конфет')
 
 	
 @dp.message_handler()
